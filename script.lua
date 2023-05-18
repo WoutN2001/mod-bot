@@ -1,9 +1,9 @@
 local dss = game:GetService("DataStoreService")
 local http = game:GetService("HttpService")
 local ds = dss:GetDataStore("DTR")
-local dsKey = "DTR_test333"
+local dsKey = "DTR_"
 
-local url = "http://localhost:3000"
+local url = ""
 
 
 local function completed(id)
@@ -17,7 +17,7 @@ end
 local function getQueue()
 	local res
 	local data
-	
+
 	pcall(function()
 		res = http:GetAsync(""..url.."/queue")
 		data = http:JSONDecode(res)
@@ -26,33 +26,38 @@ local function getQueue()
 	if not data then
 		return false
 	end
-	
+
 	for i,v in pairs(data) do
 		local id = i
 		local name = v['name']
 		local method = v['method']
 		local reason = v['reason']
-		
+
 		if id and name and method then
-			if game.Players:FindFirstChild(name) then
+			
 				if method == "kick" then
-					game.Players:FindFirstChild(name):Kick(reason)
+					for i,v in pairs(game.Players:GetChildren()) do
+						if (string.lower(name) == string.lower(v.Name)) then
+							v:Kick(reason)
+						end
+					end
 					completed(id)
 				end
 				if method == "ban" then
-					local plr = game.Players:FindFirstChild(name)
-					local userid = plr.UserId
+					local userid = game.Players:GetUserIdFromNameAsync(name)
 					ds:SetAsync(""..dsKey..userid, reason)
-					plr:Kick(reason)
 					completed(id)
+					for i,v in pairs(game.Players:GetChildren()) do
+						if (string.lower(name) == string.lower(v.Name)) then
+							v:Kick(reason)
+						end
+					end
 				end
 				if method == "unban" then
-					local ps = game:GetService("Players")
-					local userid = ps:GetUserIdFromNameAsync(name)
+					local userid = game.Players:GetUserIdFromNameAsync(name)
 					ds:RemoveAsync(""..dsKey..userid.."")
 					completed(id)
 				end
-			end
 		end
 	end
 	return true
